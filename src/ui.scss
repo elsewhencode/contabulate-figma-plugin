@@ -1,0 +1,13 @@
+@import '@create-figma-plugin/ui/lib/scss/constants';
+
+.dropdownValue {
+  border: 1px solid $color-black-10;
+  padding: $space-small;
+  width: 100%;
+}
+
+.dropdownContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}

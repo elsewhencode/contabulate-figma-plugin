@@ -1,0 +1,43 @@
+{
+  "name": "@elsewhencode/contabulate-figma-plugin",
+  "version": "1.0.0",
+  "keywords": [
+    "create-figma-plugin",
+    "figma",
+    "figma-plugin"
+  ],
+  "license": "UNLICENSED",
+  "author": "Jon Rimmer",
+  "dependencies": {},
+  "private": true,
+  "devDependencies": {
+    "@babel/core": "^7.12.9",
+    "@create-figma-plugin/build": "0.0.80",
+    "@create-figma-plugin/tsconfig": "0.0.80",
+    "@create-figma-plugin/ui": "0.0.80",
+    "@create-figma-plugin/utilities": "0.0.80",
+    "@figma/plugin-typings": "^1.19.0",
+    "@storybook/addon-actions": "^6.1.10",
+    "@storybook/addon-essentials": "^6.1.10",
+    "@storybook/addon-links": "^6.1.10",
+    "@storybook/preact": "^6.1.10",
+    "@storybook/preset-scss": "^1.0.3",
+    "@types/faker": "^5.1.5",
+    "babel-loader": "^8.2.2",
+    "core-js": "^3.8.0",
+    "faker": "^5.1.0",
+    "preact": "^10.5.7"
+  },
+  "scripts": {
+    "build": "build-figma-plugin",
+    "watch": "build-figma-plugin --watch",
+    "storybook": "start-storybook -p 6006",
+    "build-storybook": "build-storybook"
+  },
+  "figma-plugin": {
+    "id": "917774295444379302",
+    "name": "Contabulate",
+    "main": "src/main.ts",
+    "ui": "src/ui.tsx"
+  }
+}
