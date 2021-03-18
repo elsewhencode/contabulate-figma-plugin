@@ -85,13 +85,17 @@ export function Plugin({ spec, fonts }: PluginProps) {
 
       <Columns space="medium">
         <div>
-          <Text muted>Columns</Text>
+          <Text numeric muted>
+            Columns
+          </Text>
           <VerticalSpace space="small" />
           <TextboxNumeric name="cols" value={state.cols} onChange={handleChange} />
         </div>
 
         <div>
-          <Text muted>Rows</Text>
+          <Text numeric muted>
+            Rows
+          </Text>
           <VerticalSpace space="small" />
           <TextboxNumeric name="rows" value={state.rows} onChange={handleChange} />
         </div>
