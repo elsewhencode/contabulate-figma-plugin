@@ -10,24 +10,45 @@ import {
   TextboxNumeric,
   useForm,
   Columns,
-  DropdownMenu,
+  Dropdown,
   DropdownOption,
   Checkbox,
+  useInitialFocus,
 } from '@create-figma-plugin/ui';
 import { h } from 'preact';
 import { useMemo } from 'preact/hooks';
 import { emit } from '@create-figma-plugin/utilities';
 import { PluginProps } from './types';
-import styles from './ui.scss';
+import styles from './ui.css';
+
+interface FormState {
+  cols: string;
+  rows: string;
+  padding: string;
+  spacing: string;
+  fontFamily: any,
+  fontStyle: any,
+  gridLines: boolean;
+}
 
 export function Plugin({ spec, fonts }: PluginProps) {
-  const { state, handleChange, handleSubmit, isValid } = useForm(spec, {
-    onClose() {
+  debugger;
+
+  const { formState, setFormState, handleSubmit, disabled } = useForm<FormState>({
+    cols: `${spec.cols}`,
+    rows: `${spec.rows}`,
+    padding: `${spec.padding}`,
+    spacing: `${spec.spacing}`,
+    gridLines: spec.gridLines,
+    fontFamily: null,
+    fontStyle: null,
+  }, {
+    close() {
       emit('cancel');
     },
 
-    onSubmit(state) {
-      if (isValid) {
+    submit(state) {
+      if (!disabled) {
         emit('create', {
           cols: parseInt(state.cols, 10),
           rows: parseInt(state.rows, 10),
@@ -60,24 +81,23 @@ export function Plugin({ spec, fonts }: PluginProps) {
   const fontStyles = useMemo(() => {
     const styles = fonts
       ? fonts
-          .filter(font => font.fontName.family === state.fontFamily)
+          .filter(font => font.fontName.family === formState.fontFamily)
           .map(f => ({ value: f.fontName.style }))
       : [];
 
     if (styles.length) {
-      if (!(state.fontStyle && styles.some(style => style.value === state.fontStyle))) {
-        handleChange({
-          fontStyle: styles[0].value,
-        });
+      if (!(formState.fontStyle && styles.some(style => style.value === formState.fontStyle))) {
+        setFormState(styles[0].value, 'fontStyle')
+
       }
     } else {
-      handleChange({
-        fontStyle: null,
-      });
+      setFormState(null, 'fontStyle');
     }
 
     return styles;
-  }, [state.fontFamily]);
+  }, [formState.fontFamily]);
+
+  console.dir(formState);
 
   return (
     <Container space="medium">
@@ -89,7 +109,7 @@ export function Plugin({ spec, fonts }: PluginProps) {
             Columns
           </Text>
           <VerticalSpace space="small" />
-          <TextboxNumeric name="cols" value={state.cols} onChange={handleChange} />
+          <TextboxNumeric name="cols" value={formState.cols} onValueInput={setFormState} {...useInitialFocus()} />
         </div>
 
         <div>
@@ -97,7 +117,7 @@ export function Plugin({ spec, fonts }: PluginProps) {
             Rows
           </Text>
           <VerticalSpace space="small" />
-          <TextboxNumeric name="rows" value={state.rows} onChange={handleChange} />
+          <TextboxNumeric name="rows" value={formState.rows} onValueInput={setFormState} />
         </div>
       </Columns>
 
@@ -107,19 +127,19 @@ export function Plugin({ spec, fonts }: PluginProps) {
         <div>
           <Text muted>Padding</Text>
           <VerticalSpace space="small" />
-          <TextboxNumeric name="padding" value={state.padding} onChange={handleChange} />
+          <TextboxNumeric name="padding" value={formState.padding} onValueInput={setFormState} />
         </div>
 
         <div>
           <Text muted>Spacing</Text>
           <VerticalSpace space="small" />
-          <TextboxNumeric name="spacing" value={state.spacing} onChange={handleChange} />
+          <TextboxNumeric name="spacing" value={formState.spacing} onValueInput={setFormState} />
         </div>
       </Columns>
 
       <VerticalSpace space="large" />
 
-      <Checkbox name="gridLines" value={state.gridLines} onChange={handleChange}>
+      <Checkbox name="gridLines" value={formState.gridLines} onValueChange={setFormState}>
         <Text>Grid lines</Text>
       </Checkbox>
 
@@ -130,17 +150,16 @@ export function Plugin({ spec, fonts }: PluginProps) {
         <VerticalSpace space="small" />
 
         <div class={styles.dropdownContainer}>
-          <DropdownMenu
+          <Dropdown
             name="fontFamily"
-            onChange={handleChange}
+            onValueChange={setFormState}
             options={fontFamilies}
-            value={state.font}
-            fullWidth
+            value={formState.fontFamily}
           >
             <div class={styles.dropdownValue}>
-              <Text>{state.fontFamily || ' '}</Text>
+              <Text>{formState.fontFamily || ' '}</Text>
             </div>
-          </DropdownMenu>
+          </Dropdown>
         </div>
       </div>
 
@@ -151,17 +170,16 @@ export function Plugin({ spec, fonts }: PluginProps) {
         <VerticalSpace space="small" />
 
         <div class={styles.dropdownContainer}>
-          <DropdownMenu
+          <Dropdown
             name="fontStyle"
-            onChange={handleChange}
+            onValueChange={setFormState}
             options={fontStyles}
-            value={state.font}
-            fullWidth
+            value={formState.fontStyle}
           >
             <div class={styles.dropdownValue}>
-              <Text>{state.fontStyle || ' '}</Text>
+              <Text>{formState.fontStyle || ' '}</Text>
             </div>
-          </DropdownMenu>
+          </Dropdown>
         </div>
       </div>
 

@@ -1,33 +1,33 @@
-function webpackFinal (config) {
-  config.module.rules.push({
-    test: /\.scss$/,
+function webpackFinal(config) {
+  const index = config.module.rules.findIndex(function (rule) {
+    return rule.test.toString() === '/\\.css$/';
+  });
+  if (index === -1) {
+    throw new Error('Module rule for `.css` files not found in Storybook webpack config');
+  }
+
+  config.module.rules[index] = {
+    sideEffects: true,
+    test: /\.css$/,
     use: [
       {
-        loader: 'style-loader'
+        loader: 'style-loader',
       },
       {
         loader: 'css-loader',
         options: {
-          importLoaders: 1,
-          modules: true
-        }
+          importLoaders: 0,
+          modules: true,
+        },
       },
-      {
-        loader: 'sass-loader'
-      }
     ],
-  })
-  return config
+  };
+
+  return config;
 }
 
 module.exports = {
-  "stories": [
-    "../src/**/*.stories.mdx",
-    "../src/**/*.stories.@(js|jsx|ts|tsx)"
-  ],
   webpackFinal,
-  "addons": [
-    "@storybook/addon-links",
-    "@storybook/addon-essentials",
-  ]
-}
+  stories: ['../src/**/*.stories.mdx', '../src/**/*.stories.@(js|jsx|ts|tsx)'],
+  addons: ['@storybook/addon-links', '@storybook/addon-essentials'],
+};

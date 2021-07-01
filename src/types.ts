@@ -10,4 +10,5 @@ export interface TableSpec {
 export interface PluginProps {
   spec: TableSpec;
   fonts: Font[];
+  [key: string]: unknown;
 }

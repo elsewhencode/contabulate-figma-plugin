@@ -1,8 +1,6 @@
-@import '@create-figma-plugin/ui/lib/scss/constants';
-
 .dropdownValue {
-  border: 1px solid $color-black-10;
-  padding: $space-small;
+  border: 1px solid var(--color-black-10);
+  padding: var(--space-small);
   width: 100%;
 }
 

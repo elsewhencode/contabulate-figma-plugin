@@ -33,7 +33,9 @@ export default async function () {
     spec: (settings as TableSpec) || defaultSpec,
   };
 
-  showUI(options, data);
+  debugger;
+
+  showUI<PluginProps>(options, data);
 
   await figma.loadFontAsync(robotoRegular);
   await figma.loadFontAsync(robotoBold);
