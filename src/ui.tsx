@@ -26,47 +26,48 @@ interface FormState {
   rows: string;
   padding: string;
   spacing: string;
-  fontFamily: any,
-  fontStyle: any,
+  fontFamily: any;
+  fontStyle: any;
   gridLines: boolean;
 }
 
 export function Plugin({ spec, fonts }: PluginProps) {
-  debugger;
-
-  const { formState, setFormState, handleSubmit, disabled } = useForm<FormState>({
-    cols: `${spec.cols}`,
-    rows: `${spec.rows}`,
-    padding: `${spec.padding}`,
-    spacing: `${spec.spacing}`,
-    gridLines: spec.gridLines,
-    fontFamily: null,
-    fontStyle: null,
-  }, {
-    close() {
-      emit('cancel');
+  const { formState, setFormState, handleSubmit, disabled } = useForm<FormState>(
+    {
+      cols: `${spec.cols}`,
+      rows: `${spec.rows}`,
+      padding: `${spec.padding}`,
+      spacing: `${spec.spacing}`,
+      gridLines: spec.gridLines,
+      fontFamily: null,
+      fontStyle: null,
     },
+    {
+      close() {
+        emit('cancel');
+      },
 
-    submit(state) {
-      if (!disabled) {
-        emit('create', {
-          cols: parseInt(state.cols, 10),
-          rows: parseInt(state.rows, 10),
-          padding: parseInt(state.padding, 10),
-          spacing: parseInt(state.spacing, 10),
-          gridLines: !!state.gridLines,
-          font: state.fontFamily
-            ? {
-                fontName: {
-                  family: state.fontFamily,
-                  style: state.fontStyle,
-                },
-              }
-            : null,
-        });
-      }
-    },
-  });
+      submit(state) {
+        if (!disabled) {
+          emit('create', {
+            cols: parseInt(state.cols, 10),
+            rows: parseInt(state.rows, 10),
+            padding: parseInt(state.padding, 10),
+            spacing: parseInt(state.spacing, 10),
+            gridLines: !!state.gridLines,
+            font: state.fontFamily
+              ? {
+                  fontName: {
+                    family: state.fontFamily,
+                    style: state.fontStyle,
+                  },
+                }
+              : null,
+          });
+        }
+      },
+    }
+  );
 
   const fontFamilies = useMemo(() => {
     const result: DropdownOption[] = fonts
@@ -87,8 +88,7 @@ export function Plugin({ spec, fonts }: PluginProps) {
 
     if (styles.length) {
       if (!(formState.fontStyle && styles.some(style => style.value === formState.fontStyle))) {
-        setFormState(styles[0].value, 'fontStyle')
-
+        setFormState(styles[0].value, 'fontStyle');
       }
     } else {
       setFormState(null, 'fontStyle');
@@ -109,7 +109,12 @@ export function Plugin({ spec, fonts }: PluginProps) {
             Columns
           </Text>
           <VerticalSpace space="small" />
-          <TextboxNumeric name="cols" value={formState.cols} onValueInput={setFormState} {...useInitialFocus()} />
+          <TextboxNumeric
+            name="cols"
+            value={formState.cols}
+            onValueInput={setFormState}
+            {...useInitialFocus()}
+          />
         </div>
 
         <div>
