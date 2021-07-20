@@ -13,6 +13,16 @@ export const Default = () => (
     spec={defaultSpec}
     fonts={[
       {
+        fontName: { family: 'Helvetica', style: 'Regular' },
+      },
+      { fontName: { family: 'Helvetica', style: 'Bold' } },
+      {
+        fontName: {
+          family: 'Roboto',
+          style: 'Regular',
+        },
+      },
+      {
         fontName: {
           family: 'Roboto',
           style: 'Medium',

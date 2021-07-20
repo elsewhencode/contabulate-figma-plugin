@@ -4,7 +4,7 @@ export interface TableSpec {
   padding: number;
   spacing: number;
   gridLines: boolean;
-  font: Font | null;
+  font: FontName;
 }
 
 export interface PluginProps {

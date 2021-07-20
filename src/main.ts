@@ -1,10 +1,9 @@
-import { loadSettingsAsync, once } from '@create-figma-plugin/utilities';
+import { loadSettingsAsync, once, setRelaunchButton } from '@create-figma-plugin/utilities';
 import { showUI } from '@create-figma-plugin/utilities';
 import faker from 'faker';
 import { PluginProps, TableSpec } from './types';
 
 const robotoRegular: FontName = { family: 'Roboto', style: 'Regular' };
-const robotoBold: FontName = { family: 'Roboto', style: 'Bold' };
 
 export const defaultSpec: TableSpec = {
   cols: 5,
@@ -12,13 +11,10 @@ export const defaultSpec: TableSpec = {
   gridLines: false,
   padding: 16,
   spacing: 16,
-  font: {
-    fontName: {
-      family: 'Roboto',
-      style: 'Regular',
-    },
-  },
+  font: robotoRegular,
 };
+
+const errorMessage = 'Please select an empty frame node or an existing table.';
 
 export default async function () {
   const options = { width: 240, height: 420 };
@@ -28,19 +24,47 @@ export default async function () {
     loadSettingsAsync(defaultSpec),
   ]);
 
+  const target = figma.currentPage.selection.find(n => n.type === 'FRAME');
+
+  let spec: TableSpec = (settings as TableSpec) || defaultSpec;
+
+  if (!target || target.type !== 'FRAME') {
+    figma.closePlugin(errorMessage);
+    return;
+  } else if (target.children.length > 0) {
+    const targetSpecJson = target.getPluginData('contabulate:spec');
+
+    if (targetSpecJson) {
+      spec = JSON.parse(targetSpecJson);
+    } else {
+      figma.closePlugin(errorMessage);
+      return;
+    }
+  }
+
   const data: PluginProps = {
     fonts,
-    spec: (settings as TableSpec) || defaultSpec,
+    spec,
   };
 
   showUI<PluginProps>(options, data);
 
-  await figma.loadFontAsync(robotoRegular);
-  await figma.loadFontAsync(robotoBold);
-
   once('create', async (spec: TableSpec) => {
     const { cols, rows, gridLines, padding, spacing, font } = spec;
-    const target = figma.currentPage.selection.find(n => n.type === 'FRAME');
+
+    target.children.forEach(child => child.remove());
+
+    await figma.loadFontAsync(font);
+
+    let bold = fonts
+      .filter(f => f.fontName.family === font.family)
+      .find(f => f.fontName.style === 'Bold')?.fontName;
+
+    if (bold) {
+      await figma.loadFontAsync(bold);
+    } else {
+      bold = font;
+    }
 
     // Only support adding to empty frames.
     if (target && target.type === 'FRAME' && target.children.length === 0) {
@@ -76,11 +100,13 @@ export default async function () {
           row.appendChild(cell);
 
           // Header?
-          cell.fontName = r === 0 ? robotoBold : robotoRegular;
+          cell.fontName = r === 0 ? bold : font;
           cell.layoutGrow = 1;
           cell.characters = faker.random.word();
         }
       }
+
+      target.setPluginData('contabulate:spec', JSON.stringify(spec));
 
       const nodes = [target];
 
@@ -89,6 +115,8 @@ export default async function () {
     } else {
       figma.closePlugin('Please select an empty frame node.');
     }
+
+    setRelaunchButton(target, 'edit');
 
     figma.closePlugin();
   });

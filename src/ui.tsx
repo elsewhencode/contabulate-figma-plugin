@@ -11,14 +11,13 @@ import {
   useForm,
   Columns,
   Dropdown,
-  DropdownOption,
   Checkbox,
   useInitialFocus,
 } from '@create-figma-plugin/ui';
 import { h } from 'preact';
 import { useMemo } from 'preact/hooks';
 import { emit } from '@create-figma-plugin/utilities';
-import { PluginProps } from './types';
+import { PluginProps, TableSpec } from './types';
 import styles from './ui.css';
 
 interface FormState {
@@ -26,8 +25,8 @@ interface FormState {
   rows: string;
   padding: string;
   spacing: string;
-  fontFamily: any;
-  fontStyle: any;
+  fontFamily: string;
+  fontStyle: string;
   gridLines: boolean;
 }
 
@@ -39,8 +38,8 @@ export function Plugin({ spec, fonts }: PluginProps) {
       padding: `${spec.padding}`,
       spacing: `${spec.spacing}`,
       gridLines: spec.gridLines,
-      fontFamily: null,
-      fontStyle: null,
+      fontFamily: spec.font.family,
+      fontStyle: spec.font.style,
     },
     {
       close() {
@@ -49,34 +48,27 @@ export function Plugin({ spec, fonts }: PluginProps) {
 
       submit(state) {
         if (!disabled) {
-          emit('create', {
+          const newSpec: TableSpec = {
             cols: parseInt(state.cols, 10),
             rows: parseInt(state.rows, 10),
             padding: parseInt(state.padding, 10),
             spacing: parseInt(state.spacing, 10),
             gridLines: !!state.gridLines,
-            font: state.fontFamily
-              ? {
-                  fontName: {
-                    family: state.fontFamily,
-                    style: state.fontStyle,
-                  },
-                }
-              : null,
-          });
+            font: {
+              family: state.fontFamily,
+              style: state.fontStyle,
+            },
+          };
+
+          emit('create', newSpec);
         }
       },
     }
   );
 
   const fontFamilies = useMemo(() => {
-    const result: DropdownOption[] = fonts
-      ? fonts.map(f => ({
-          value: f.fontName.family,
-        }))
-      : [];
-
-    return result;
+    const families = new Set<string>(fonts.map(f => f.fontName.family));
+    return Array.from(families.values()).map(value => ({ value }));
   }, [fonts]);
 
   const fontStyles = useMemo(() => {
@@ -91,7 +83,7 @@ export function Plugin({ spec, fonts }: PluginProps) {
         setFormState(styles[0].value, 'fontStyle');
       }
     } else {
-      setFormState(null, 'fontStyle');
+      setFormState('', 'fontStyle');
     }
 
     return styles;
@@ -100,113 +92,115 @@ export function Plugin({ spec, fonts }: PluginProps) {
   console.dir(formState);
 
   return (
-    <Container space="medium">
-      <VerticalSpace space="medium" />
+    <div className={styles.uiWrap}>
+      <Container space="medium">
+        <VerticalSpace space="medium" />
 
-      <Columns space="medium">
+        <Columns space="medium">
+          <div>
+            <Text numeric muted>
+              Columns
+            </Text>
+            <VerticalSpace space="small" />
+            <TextboxNumeric
+              name="cols"
+              value={formState.cols}
+              onValueInput={setFormState}
+              {...useInitialFocus()}
+            />
+          </div>
+
+          <div>
+            <Text numeric muted>
+              Rows
+            </Text>
+            <VerticalSpace space="small" />
+            <TextboxNumeric name="rows" value={formState.rows} onValueInput={setFormState} />
+          </div>
+        </Columns>
+
+        <VerticalSpace space="large" />
+
+        <Columns space="medium">
+          <div>
+            <Text muted>Padding</Text>
+            <VerticalSpace space="small" />
+            <TextboxNumeric name="padding" value={formState.padding} onValueInput={setFormState} />
+          </div>
+
+          <div>
+            <Text muted>Spacing</Text>
+            <VerticalSpace space="small" />
+            <TextboxNumeric name="spacing" value={formState.spacing} onValueInput={setFormState} />
+          </div>
+        </Columns>
+
+        <VerticalSpace space="large" />
+
+        <Checkbox name="gridLines" value={formState.gridLines} onValueChange={setFormState}>
+          <Text>Grid lines</Text>
+        </Checkbox>
+
+        <VerticalSpace space="large" />
+
         <div>
-          <Text numeric muted>
-            Columns
-          </Text>
+          <Text muted>Font Family</Text>
           <VerticalSpace space="small" />
-          <TextboxNumeric
-            name="cols"
-            value={formState.cols}
-            onValueInput={setFormState}
-            {...useInitialFocus()}
-          />
+
+          <div class={styles.dropdownContainer}>
+            <Dropdown
+              name="fontFamily"
+              onValueChange={setFormState}
+              options={fontFamilies}
+              value={formState.fontFamily}
+            >
+              <div class={styles.dropdownValue}>
+                <Text>{formState.fontFamily || ' '}</Text>
+              </div>
+            </Dropdown>
+          </div>
         </div>
 
-        <div>
-          <Text numeric muted>
-            Rows
-          </Text>
-          <VerticalSpace space="small" />
-          <TextboxNumeric name="rows" value={formState.rows} onValueInput={setFormState} />
-        </div>
-      </Columns>
-
-      <VerticalSpace space="large" />
-
-      <Columns space="medium">
-        <div>
-          <Text muted>Padding</Text>
-          <VerticalSpace space="small" />
-          <TextboxNumeric name="padding" value={formState.padding} onValueInput={setFormState} />
-        </div>
+        <VerticalSpace space="large" />
 
         <div>
-          <Text muted>Spacing</Text>
+          <Text muted>Font Style</Text>
           <VerticalSpace space="small" />
-          <TextboxNumeric name="spacing" value={formState.spacing} onValueInput={setFormState} />
+
+          <div class={styles.dropdownContainer}>
+            <Dropdown
+              name="fontStyle"
+              onValueChange={setFormState}
+              options={fontStyles}
+              value={formState.fontStyle}
+            >
+              <div class={styles.dropdownValue}>
+                <Text>{formState.fontStyle || ' '}</Text>
+              </div>
+            </Dropdown>
+          </div>
         </div>
-      </Columns>
 
-      <VerticalSpace space="large" />
+        <VerticalSpace space="large" />
 
-      <Checkbox name="gridLines" value={formState.gridLines} onValueChange={setFormState}>
-        <Text>Grid lines</Text>
-      </Checkbox>
+        <Button fullWidth onClick={handleSubmit}>
+          Create
+        </Button>
 
-      <VerticalSpace space="large" />
-
-      <div>
-        <Text muted>Font Family</Text>
         <VerticalSpace space="small" />
 
-        <div class={styles.dropdownContainer}>
-          <Dropdown
-            name="fontFamily"
-            onValueChange={setFormState}
-            options={fontFamilies}
-            value={formState.fontFamily}
-          >
-            <div class={styles.dropdownValue}>
-              <Text>{formState.fontFamily || ' '}</Text>
-            </div>
-          </Dropdown>
-        </div>
-      </div>
-
-      <VerticalSpace space="large" />
-
-      <div>
-        <Text muted>Font Style</Text>
-        <VerticalSpace space="small" />
-
-        <div class={styles.dropdownContainer}>
-          <Dropdown
-            name="fontStyle"
-            onValueChange={setFormState}
-            options={fontStyles}
-            value={formState.fontStyle}
-          >
-            <div class={styles.dropdownValue}>
-              <Text>{formState.fontStyle || ' '}</Text>
-            </div>
-          </Dropdown>
-        </div>
-      </div>
-
-      <VerticalSpace space="large" />
-
-      <Button fullWidth onClick={handleSubmit}>
-        Create
-      </Button>
-
-      <VerticalSpace space="small" />
-
-      <Button
-        fullWidth
-        secondary
-        onClick={() => {
-          emit('cancel');
-        }}
-      >
-        Cancel
-      </Button>
-      <VerticalSpace space="medium" />
-    </Container>
+        <Button
+          fullWidth
+          secondary
+          onClick={() => {
+            emit('cancel');
+          }}
+        >
+          Cancel
+        </Button>
+        <VerticalSpace space="medium" />
+      </Container>
+    </div>
   );
 }
 
