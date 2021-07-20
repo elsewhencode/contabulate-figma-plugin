@@ -13,9 +13,11 @@ import {
   Dropdown,
   Checkbox,
   useInitialFocus,
+  DropdownOption,
+  DropdownOptionValue,
 } from '@create-figma-plugin/ui';
 import { h } from 'preact';
-import { useMemo } from 'preact/hooks';
+import { useMemo, useState } from 'preact/hooks';
 import { emit } from '@create-figma-plugin/utilities';
 import { PluginProps, TableSpec } from './types';
 import styles from './ui.css';
@@ -31,6 +33,20 @@ interface FormState {
 }
 
 export function Plugin({ spec, fonts }: PluginProps) {
+  const [fontFamilies, fontMap] = useMemo(() => {
+    const map = new Map<string, DropdownOptionValue<string>[]>();
+
+    fonts.forEach(({ fontName: { family, style } }) => {
+      if (!map.has(family)) {
+        map.set(family, [{ value: style }]);
+      } else {
+        map.get(family)?.push({ value: style });
+      }
+    });
+
+    return [Array.from(map.keys()).map(value => ({ value })), map];
+  }, [fonts]);
+
   const { formState, setFormState, handleSubmit, disabled } = useForm<FormState>(
     {
       cols: `${spec.cols}`,
@@ -66,28 +82,9 @@ export function Plugin({ spec, fonts }: PluginProps) {
     }
   );
 
-  const fontFamilies = useMemo(() => {
-    const families = new Set<string>(fonts.map(f => f.fontName.family));
-    return Array.from(families.values()).map(value => ({ value }));
-  }, [fonts]);
-
-  const fontStyles = useMemo(() => {
-    const styles = fonts
-      ? fonts
-          .filter(font => font.fontName.family === formState.fontFamily)
-          .map(f => ({ value: f.fontName.style }))
-      : [];
-
-    if (styles.length) {
-      if (!(formState.fontStyle && styles.some(style => style.value === formState.fontStyle))) {
-        setFormState(styles[0].value, 'fontStyle');
-      }
-    } else {
-      setFormState('', 'fontStyle');
-    }
-
-    return styles;
-  }, [formState.fontFamily]);
+  const [fontStyles, setFontStyles] = useState<DropdownOption<string>[]>(
+    fontMap.get(spec.font.family) || []
+  );
 
   console.dir(formState);
 
@@ -150,7 +147,16 @@ export function Plugin({ spec, fonts }: PluginProps) {
           <div class={styles.dropdownContainer}>
             <Dropdown
               name="fontFamily"
-              onValueChange={setFormState}
+              onValueChange={family => {
+                const styles = fontMap.get(family)!;
+
+                if (!styles.find(s => s.value === formState.fontStyle)) {
+                  setFontStyles(styles);
+                  setFormState(styles[0].value, 'fontStyle');
+                }
+
+                setFormState(family, 'fontFamily');
+              }}
               options={fontFamilies}
               value={formState.fontFamily}
             >
