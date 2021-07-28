@@ -5,19 +5,25 @@ import { PluginProps, TableSpec } from './types';
 
 const robotoRegular: FontName = { family: 'Roboto', style: 'Regular' };
 
+const defaultGridLineColor: RGB = { r: 80, g: 80, b: 80 };
+
 export const defaultSpec: TableSpec = {
-  cols: 5,
+  colCount: 5,
   rows: 5,
-  gridLines: false,
   padding: 16,
   spacing: 16,
   font: robotoRegular,
+  styles: {
+    gridLines: false,
+    gridLineColor: defaultGridLineColor,
+    gridLineOpacity: 0.25,
+  },
 };
 
 const errorMessage = 'Please select an empty frame node or an existing table.';
 
 export default async function () {
-  const options = { width: 240, height: 420 };
+  const options = { width: 300, height: 450 };
 
   const [fonts, settings] = await Promise.all([
     figma.listAvailableFontsAsync(),
@@ -50,7 +56,7 @@ export default async function () {
   showUI<PluginProps>(options, data);
 
   once('create', async (spec: TableSpec) => {
-    const { cols, rows, gridLines, padding, spacing, font } = spec;
+    const { colCount: cols, rows, styles, padding, spacing, font } = spec;
 
     target.children.forEach(child => child.remove());
 
@@ -69,7 +75,7 @@ export default async function () {
     // Only support adding to empty frames.
     if (target && target.type === 'FRAME' && target.children.length === 0) {
       target.layoutMode = 'VERTICAL';
-      target.itemSpacing = gridLines ? spacing / 2 : spacing;
+      target.itemSpacing = styles.gridLines ? spacing / 2 : spacing;
       target.counterAxisSizingMode = 'FIXED';
       target.primaryAxisSizingMode = 'AUTO';
 
@@ -79,10 +85,16 @@ export default async function () {
       target.paddingRight = padding;
 
       for (let r = 0; r < rows; r++) {
-        if (r !== 0 && gridLines) {
+        if (r !== 0 && styles.gridLines) {
           const line = figma.createLine();
           line.layoutAlign = 'STRETCH';
-          line.opacity = 0.25;
+          line.strokes = [
+            {
+              type: 'SOLID',
+              color: styles.gridLineColor || defaultGridLineColor,
+              opacity: styles.gridLineOpacity,
+            },
+          ];
           target.appendChild(line);
         }
 

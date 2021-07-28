@@ -15,10 +15,15 @@ import {
   useInitialFocus,
   DropdownOption,
   DropdownOptionValue,
+  TextboxColor,
 } from '@create-figma-plugin/ui';
 import { h } from 'preact';
 import { useMemo, useState } from 'preact/hooks';
-import { emit } from '@create-figma-plugin/utilities';
+import {
+  convertHexColorToRgbColor,
+  convertRgbColorToHexColor,
+  emit,
+} from '@create-figma-plugin/utilities';
 import { PluginProps, TableSpec } from './types';
 import styles from './ui.css';
 
@@ -30,6 +35,8 @@ interface FormState {
   fontFamily: string;
   fontStyle: string;
   gridLines: boolean;
+  gridLineColor: string;
+  gridLineOpacity: string;
 }
 
 export function Plugin({ spec, fonts }: PluginProps) {
@@ -49,11 +56,15 @@ export function Plugin({ spec, fonts }: PluginProps) {
 
   const { formState, setFormState, handleSubmit, disabled } = useForm<FormState>(
     {
-      cols: `${spec.cols}`,
+      cols: `${spec.colCount}`,
       rows: `${spec.rows}`,
       padding: `${spec.padding}`,
       spacing: `${spec.spacing}`,
-      gridLines: spec.gridLines,
+      gridLines: spec.styles.gridLines,
+      gridLineColor: spec.styles.gridLineColor
+        ? convertRgbColorToHexColor(spec.styles.gridLineColor) || '#000000'
+        : '#000000',
+      gridLineOpacity: `${(spec.styles.gridLineOpacity || 0.25) * 100}`,
       fontFamily: spec.font.family,
       fontStyle: spec.font.style,
     },
@@ -65,11 +76,17 @@ export function Plugin({ spec, fonts }: PluginProps) {
       submit(state) {
         if (!disabled) {
           const newSpec: TableSpec = {
-            cols: parseInt(state.cols, 10),
+            colCount: parseInt(state.cols, 10),
             rows: parseInt(state.rows, 10),
             padding: parseInt(state.padding, 10),
             spacing: parseInt(state.spacing, 10),
-            gridLines: !!state.gridLines,
+            styles: {
+              gridLines: !!state.gridLines,
+              gridLineColor: state.gridLineColor
+                ? convertHexColorToRgbColor(state.gridLineColor)
+                : null,
+              gridLineOpacity: Number.parseInt(state.gridLineOpacity, 10) / 100,
+            },
             font: {
               family: state.fontFamily,
               style: state.fontStyle,
@@ -78,6 +95,11 @@ export function Plugin({ spec, fonts }: PluginProps) {
 
           emit('create', newSpec);
         }
+      },
+      transform(state) {
+        return {
+          ...state,
+        };
       },
     }
   );
@@ -134,9 +156,32 @@ export function Plugin({ spec, fonts }: PluginProps) {
 
         <VerticalSpace space="large" />
 
-        <Checkbox name="gridLines" value={formState.gridLines} onValueChange={setFormState}>
-          <Text>Grid lines</Text>
-        </Checkbox>
+        <Text bold>Grid Lines</Text>
+
+        <VerticalSpace space="small" />
+
+        <Columns space="medium">
+          <div>
+            <VerticalSpace space="extraSmall" />
+            <Checkbox name="gridLines" value={formState.gridLines} onValueChange={setFormState}>
+              <Text>Enabled</Text>
+            </Checkbox>
+          </div>
+
+          <div>
+            <TextboxColor
+              disabled={!formState.gridLines}
+              hexColor={formState.gridLineColor}
+              hexColorPlaceholder="Color"
+              hexColorName="gridLineColor"
+              onHexColorValueInput={setFormState}
+              opacityName="gridLineOpacity"
+              opacity={formState.gridLineOpacity}
+              onOpacityValueInput={setFormState}
+              opacityPlaceholder="%"
+            />
+          </div>
+        </Columns>
 
         <VerticalSpace space="large" />
 
