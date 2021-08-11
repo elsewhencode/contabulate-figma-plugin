@@ -18,14 +18,16 @@ import {
   TextboxColor,
 } from '@create-figma-plugin/ui';
 import { h } from 'preact';
-import { useMemo, useState } from 'preact/hooks';
+import { useEffect, useMemo, useState } from 'preact/hooks';
 import {
   convertHexColorToRgbColor,
   convertRgbColorToHexColor,
   emit,
 } from '@create-figma-plugin/utilities';
-import { PluginProps, TableSpec } from './types';
+import { PluginProps } from './types';
 import styles from './ui.css';
+import { TableSpec } from './dto/tableSpec';
+import useDebounce from './use-debounce';
 
 interface FormState {
   cols: string;
@@ -37,6 +39,28 @@ interface FormState {
   gridLines: boolean;
   gridLineColor: string;
   gridLineOpacity: string;
+  seed: number;
+}
+
+function mapState(formState: FormState): TableSpec {
+  return {
+    cols: parseInt(formState.cols, 10),
+    rows: parseInt(formState.rows, 10),
+    padding: parseInt(formState.padding, 10),
+    spacing: parseInt(formState.spacing, 10),
+    styles: {
+      gridLines: !!formState.gridLines,
+      gridLineColor: formState.gridLineColor
+        ? convertHexColorToRgbColor(formState.gridLineColor)
+        : { r: 0, g: 0, b: 0 },
+      gridLineOpacity: Number.parseInt(formState.gridLineOpacity, 10) / 100,
+    },
+    font: {
+      family: formState.fontFamily,
+      style: formState.fontStyle,
+    },
+    seed: formState.seed,
+  };
 }
 
 export function Plugin({ spec, fonts }: PluginProps) {
@@ -56,59 +80,45 @@ export function Plugin({ spec, fonts }: PluginProps) {
 
   const { formState, setFormState, handleSubmit, disabled } = useForm<FormState>(
     {
-      cols: `${spec.colCount}`,
+      cols: `${spec.cols}`,
       rows: `${spec.rows}`,
       padding: `${spec.padding}`,
       spacing: `${spec.spacing}`,
       gridLines: spec.styles.gridLines,
       gridLineColor: spec.styles.gridLineColor
-        ? convertRgbColorToHexColor(spec.styles.gridLineColor) || '#000000'
-        : '#000000',
+        ? convertRgbColorToHexColor(spec.styles.gridLineColor) || '000000'
+        : '000000',
       gridLineOpacity: `${(spec.styles.gridLineOpacity || 0.25) * 100}`,
       fontFamily: spec.font.family,
       fontStyle: spec.font.style,
+      seed: spec.seed,
     },
     {
       close() {
+        console.log('Closing');
         emit('cancel');
       },
 
       submit(state) {
         if (!disabled) {
-          const newSpec: TableSpec = {
-            colCount: parseInt(state.cols, 10),
-            rows: parseInt(state.rows, 10),
-            padding: parseInt(state.padding, 10),
-            spacing: parseInt(state.spacing, 10),
-            styles: {
-              gridLines: !!state.gridLines,
-              gridLineColor: state.gridLineColor
-                ? convertHexColorToRgbColor(state.gridLineColor)
-                : null,
-              gridLineOpacity: Number.parseInt(state.gridLineOpacity, 10) / 100,
-            },
-            font: {
-              family: state.fontFamily,
-              style: state.fontStyle,
-            },
-          };
-
-          emit('create', newSpec);
+          console.log('Creating');
+          emit('create', mapState(state));
         }
-      },
-      transform(state) {
-        return {
-          ...state,
-        };
       },
     }
   );
 
+  const debouncedState = useDebounce(formState, 200);
+
+  useEffect(() => {
+    console.log('Previewing');
+    const newSpec = mapState(debouncedState);
+    emit('preview', newSpec);
+  }, [debouncedState, disabled]);
+
   const [fontStyles, setFontStyles] = useState<DropdownOption<string>[]>(
     fontMap.get(spec.font.family) || []
   );
-
-  console.dir(formState);
 
   return (
     <div className={styles.uiWrap}>
@@ -235,7 +245,7 @@ export function Plugin({ spec, fonts }: PluginProps) {
         <VerticalSpace space="large" />
 
         <Button fullWidth onClick={handleSubmit}>
-          Create
+          Apply
         </Button>
 
         <VerticalSpace space="small" />

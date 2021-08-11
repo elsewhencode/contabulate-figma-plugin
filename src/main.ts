@@ -1,14 +1,15 @@
-import { loadSettingsAsync, once, setRelaunchButton } from '@create-figma-plugin/utilities';
+import { loadSettingsAsync, on, once, setRelaunchButton } from '@create-figma-plugin/utilities';
 import { showUI } from '@create-figma-plugin/utilities';
 import faker from 'faker';
-import { PluginProps, TableSpec } from './types';
+import { TableSpec } from './dto/tableSpec';
+import { PluginProps } from './types';
 
 const robotoRegular: FontName = { family: 'Roboto', style: 'Regular' };
 
 const defaultGridLineColor: RGB = { r: 80, g: 80, b: 80 };
 
 export const defaultSpec: TableSpec = {
-  colCount: 5,
+  cols: 5,
   rows: 5,
   padding: 16,
   spacing: 16,
@@ -18,6 +19,7 @@ export const defaultSpec: TableSpec = {
     gridLineColor: defaultGridLineColor,
     gridLineOpacity: 0.25,
   },
+  seed: Date.now(),
 };
 
 const errorMessage = 'Please select an empty frame node or an existing table.';
@@ -32,16 +34,19 @@ export default async function () {
 
   const target = figma.currentPage.selection.find(n => n.type === 'FRAME');
 
-  let spec: TableSpec = (settings as TableSpec) || defaultSpec;
+  let spec: TableSpec = TableSpec.parse(settings) || defaultSpec;
 
   if (!target || target.type !== 'FRAME') {
     figma.closePlugin(errorMessage);
     return;
   } else if (target.children.length > 0) {
-    const targetSpecJson = target.getPluginData('contabulate:spec');
+    const targetSpecJson = target.getPluginData('spec');
 
     if (targetSpecJson) {
-      spec = JSON.parse(targetSpecJson);
+      const parsedSpec = TableSpec.safeParse(JSON.parse(targetSpecJson));
+      if (parsedSpec.success) {
+        spec = parsedSpec.data;
+      }
     } else {
       figma.closePlugin(errorMessage);
       return;
@@ -55,8 +60,12 @@ export default async function () {
 
   showUI<PluginProps>(options, data);
 
-  once('create', async (spec: TableSpec) => {
-    const { colCount: cols, rows, styles, padding, spacing, font } = spec;
+  let currentUpdate: Promise<void> | null = null;
+
+  const applySpec = async (spec: TableSpec) => {
+    const { cols: cols, rows, styles, padding, spacing, font, seed } = spec;
+
+    faker.seed(seed);
 
     target.children.forEach(child => child.remove());
 
@@ -72,68 +81,77 @@ export default async function () {
       bold = font;
     }
 
-    // Only support adding to empty frames.
-    if (target && target.type === 'FRAME' && target.children.length === 0) {
-      target.layoutMode = 'VERTICAL';
-      target.itemSpacing = styles.gridLines ? spacing / 2 : spacing;
-      target.counterAxisSizingMode = 'FIXED';
-      target.primaryAxisSizingMode = 'AUTO';
+    target.layoutMode = 'VERTICAL';
+    target.itemSpacing = styles.gridLines ? spacing / 2 : spacing;
+    target.counterAxisSizingMode = 'FIXED';
+    target.primaryAxisSizingMode = 'AUTO';
 
-      target.paddingTop = padding;
-      target.paddingLeft = padding;
-      target.paddingBottom = padding;
-      target.paddingRight = padding;
+    target.paddingTop = padding;
+    target.paddingLeft = padding;
+    target.paddingBottom = padding;
+    target.paddingRight = padding;
 
-      for (let r = 0; r < rows; r++) {
-        if (r !== 0 && styles.gridLines) {
-          const line = figma.createLine();
-          line.layoutAlign = 'STRETCH';
-          line.strokes = [
-            {
-              type: 'SOLID',
-              color: styles.gridLineColor || defaultGridLineColor,
-              opacity: styles.gridLineOpacity,
-            },
-          ];
-          target.appendChild(line);
-        }
-
-        const row = figma.createFrame();
-        target.appendChild(row);
-
-        row.layoutMode = 'HORIZONTAL';
-        row.layoutAlign = 'STRETCH';
-        row.itemSpacing = spacing;
-        row.primaryAxisSizingMode = 'FIXED';
-        row.counterAxisSizingMode = 'AUTO';
-
-        for (let c = 0; c < cols; c++) {
-          const cell = figma.createText();
-          row.appendChild(cell);
-
-          // Header?
-          cell.fontName = r === 0 ? bold : font;
-          cell.layoutGrow = 1;
-          cell.characters = faker.random.word();
-        }
+    for (let r = 0; r < rows; r++) {
+      if (r !== 0 && styles.gridLines) {
+        const line = figma.createLine();
+        line.layoutAlign = 'STRETCH';
+        line.strokes = [
+          {
+            type: 'SOLID',
+            color: styles.gridLineColor || defaultGridLineColor,
+            opacity: styles.gridLineOpacity,
+          },
+        ];
+        target.appendChild(line);
       }
 
-      target.setPluginData('contabulate:spec', JSON.stringify(spec));
+      const row = figma.createFrame();
+      target.appendChild(row);
 
-      const nodes = [target];
+      row.layoutMode = 'HORIZONTAL';
+      row.layoutAlign = 'STRETCH';
+      row.itemSpacing = spacing;
+      row.primaryAxisSizingMode = 'FIXED';
+      row.counterAxisSizingMode = 'AUTO';
 
-      figma.currentPage.selection = nodes;
-      figma.viewport.scrollAndZoomIntoView(nodes);
-    } else {
-      figma.closePlugin('Please select an empty frame node.');
+      for (let c = 0; c < cols; c++) {
+        const cell = figma.createText();
+        row.appendChild(cell);
+
+        // Header?
+        cell.fontName = r === 0 ? bold : font;
+        cell.layoutGrow = 1;
+        const word = faker.random.word();
+        cell.characters = r === 0 ? `${word[0].toLocaleUpperCase()}${word.substr(1)}` : word;
+      }
     }
+  };
 
+  on('preview', async (spec: TableSpec) => {
+    if (currentUpdate) {
+      currentUpdate = currentUpdate.then(() => applySpec(spec));
+    } else {
+      currentUpdate = applySpec(spec);
+    }
+  });
+
+  once('create', async (spec: TableSpec) => {
     setRelaunchButton(target, 'edit');
+    target.setPluginData('spec', JSON.stringify(spec));
+    const nodes = [target];
 
+    figma.currentPage.selection = nodes;
+    figma.viewport.scrollAndZoomIntoView(nodes);
     figma.closePlugin();
   });
 
   once('cancel', () => {
+    if (spec) {
+      applySpec(spec);
+    } else {
+      target.children.forEach(child => child.remove());
+    }
+
     figma.closePlugin();
   });
 }

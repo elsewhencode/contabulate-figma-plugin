@@ -1,17 +1,4 @@
-export interface StyleSpec {
-  gridLines: boolean;
-  gridLineColor: RGB | null;
-  gridLineOpacity: number;
-}
-
-export interface TableSpec {
-  colCount: number;
-  rows: number;
-  padding: number;
-  spacing: number;
-  font: FontName;
-  styles: StyleSpec;
-}
+import { TableSpec } from './dto/tableSpec';
 
 export interface PluginProps {
   spec: TableSpec;

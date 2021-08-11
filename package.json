@@ -8,14 +8,18 @@
   ],
   "license": "UNLICENSED",
   "author": "Jon Rimmer",
-  "dependencies": {},
+  "dependencies": {
+    "@create-figma-plugin/ui": "1.2.2",
+    "@create-figma-plugin/utilities": "1.2.2",
+    "zod": "^3.5.1",
+    "faker": "^5.5.3",
+    "preact": "^10.5.14"
+  },
   "private": true,
   "devDependencies": {
     "@babel/core": "^7.14.6",
     "@create-figma-plugin/build": "1.2.2",
     "@create-figma-plugin/tsconfig": "1.2.2",
-    "@create-figma-plugin/ui": "1.2.2",
-    "@create-figma-plugin/utilities": "1.2.2",
     "@figma/plugin-typings": "^1.26.0",
     "@storybook/addon-actions": "^6.3.4",
     "@storybook/addon-essentials": "^6.3.4",
@@ -26,8 +30,6 @@
     "babel-loader": "^8.2.2",
     "core-js": "^3.15.2",
     "css-loader": "^5.2.6",
-    "faker": "^5.5.3",
-    "preact": "^10.5.14",
     "style-loader": "^2.0.0",
     "typescript": "^4.3.5"
   },

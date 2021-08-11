@@ -1,8 +1,8 @@
-# contabulation
+# Contabulate
 
 ## Development guide
 
-*This plugin is built with [Create Figma Plugin](https://github.com/yuanqing/create-figma-plugin).*
+_This plugin is built with [Create Figma Plugin](https://github.com/yuanqing/create-figma-plugin)._
 
 ### Pre-requisites
 
