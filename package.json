@@ -11,9 +11,10 @@
   "dependencies": {
     "@create-figma-plugin/ui": "1.2.2",
     "@create-figma-plugin/utilities": "1.2.2",
-    "zod": "^3.5.1",
     "faker": "^5.5.3",
-    "preact": "^10.5.14"
+    "immer": "^8.0.1",
+    "preact": "^10.5.14",
+    "zod": "^3.5.1"
   },
   "private": true,
   "devDependencies": {

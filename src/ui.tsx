@@ -1,46 +1,21 @@
-// src/ui.tsx
-
 /** @jsx h */
-import {
-  render,
-  Container,
-  Text,
-  VerticalSpace,
-  Button,
-  TextboxNumeric,
-  useForm,
-  Columns,
-  Dropdown,
-  Checkbox,
-  useInitialFocus,
-  DropdownOption,
-  DropdownOptionValue,
-  TextboxColor,
-} from '@create-figma-plugin/ui';
+import { render, Container, VerticalSpace, Button, useForm, Tabs } from '@create-figma-plugin/ui';
 import { h } from 'preact';
-import { useEffect, useMemo, useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import {
   convertHexColorToRgbColor,
   convertRgbColorToHexColor,
   emit,
 } from '@create-figma-plugin/utilities';
-import { PluginProps } from './types';
+import { FormState, PluginProps } from './types';
 import styles from './ui.css';
 import { TableSpec } from './dto/tableSpec';
 import useDebounce from './use-debounce';
+import { Config } from './components/Config';
+import { ColumnConfig } from './components/ColumnConfig';
+import produce from 'immer';
 
-interface FormState {
-  cols: string;
-  rows: string;
-  padding: string;
-  spacing: string;
-  fontFamily: string;
-  fontStyle: string;
-  gridLines: boolean;
-  gridLineColor: string;
-  gridLineOpacity: string;
-  seed: number;
-}
+export const SIZE = { width: 300, height: 500 };
 
 function mapState(formState: FormState): TableSpec {
   return {
@@ -60,24 +35,11 @@ function mapState(formState: FormState): TableSpec {
       style: formState.fontStyle,
     },
     seed: formState.seed,
+    columns: formState.columns,
   };
 }
 
 export function Plugin({ spec, fonts }: PluginProps) {
-  const [fontFamilies, fontMap] = useMemo(() => {
-    const map = new Map<string, DropdownOptionValue<string>[]>();
-
-    fonts.forEach(({ fontName: { family, style } }) => {
-      if (!map.has(family)) {
-        map.set(family, [{ value: style }]);
-      } else {
-        map.get(family)?.push({ value: style });
-      }
-    });
-
-    return [Array.from(map.keys()).map(value => ({ value })), map];
-  }, [fonts]);
-
   const { formState, setFormState, handleSubmit, disabled } = useForm<FormState>(
     {
       cols: `${spec.cols}`,
@@ -92,6 +54,7 @@ export function Plugin({ spec, fonts }: PluginProps) {
       fontFamily: spec.font.family,
       fontStyle: spec.font.style,
       seed: spec.seed,
+      columns: spec.columns,
     },
     {
       close() {
@@ -105,6 +68,24 @@ export function Plugin({ spec, fonts }: PluginProps) {
           emit('create', mapState(state));
         }
       },
+      transform: produce((state: FormState) => {
+        const colCount = Number.parseInt(state.cols);
+
+        if (Number.isFinite(colCount) && colCount !== state.columns.length) {
+          if (state.columns.length < colCount) {
+            state.columns.push(
+              ...Array.from({ length: colCount - state.columns.length }).map(() => ({
+                name: null,
+                type: 'Word' as const,
+              }))
+            );
+          } else {
+            state.columns = state.columns.slice(0, colCount);
+          }
+        }
+
+        return state;
+      }),
     }
   );
 
@@ -116,140 +97,43 @@ export function Plugin({ spec, fonts }: PluginProps) {
     emit('preview', newSpec);
   }, [debouncedState, disabled]);
 
-  const [fontStyles, setFontStyles] = useState<DropdownOption<string>[]>(
-    fontMap.get(spec.font.family) || []
-  );
+  const [tab, setTab] = useState<string>('Config');
+
+  console.dir(formState);
 
   return (
     <div className={styles.uiWrap}>
+      <div className={styles.tabWrapper}>
+        <Tabs
+          options={[
+            {
+              children: (
+                <Config
+                  formState={formState}
+                  setFormState={setFormState}
+                  fonts={fonts}
+                  spec={spec}
+                />
+              ),
+              value: 'Config',
+            },
+            {
+              children: <ColumnConfig formState={formState} setFormState={setFormState} />,
+              value: 'Columns',
+            },
+          ]}
+          value={tab}
+          onValueChange={setTab}
+        />
+      </div>
+
       <Container space="medium">
-        <VerticalSpace space="medium" />
-
-        <Columns space="medium">
-          <div>
-            <Text numeric muted>
-              Columns
-            </Text>
-            <VerticalSpace space="small" />
-            <TextboxNumeric
-              name="cols"
-              value={formState.cols}
-              onValueInput={setFormState}
-              {...useInitialFocus()}
-            />
-          </div>
-
-          <div>
-            <Text numeric muted>
-              Rows
-            </Text>
-            <VerticalSpace space="small" />
-            <TextboxNumeric name="rows" value={formState.rows} onValueInput={setFormState} />
-          </div>
-        </Columns>
-
         <VerticalSpace space="large" />
-
-        <Columns space="medium">
-          <div>
-            <Text muted>Padding</Text>
-            <VerticalSpace space="small" />
-            <TextboxNumeric name="padding" value={formState.padding} onValueInput={setFormState} />
-          </div>
-
-          <div>
-            <Text muted>Spacing</Text>
-            <VerticalSpace space="small" />
-            <TextboxNumeric name="spacing" value={formState.spacing} onValueInput={setFormState} />
-          </div>
-        </Columns>
-
-        <VerticalSpace space="large" />
-
-        <Text bold>Grid Lines</Text>
-
-        <VerticalSpace space="small" />
-
-        <Columns space="medium">
-          <div>
-            <VerticalSpace space="extraSmall" />
-            <Checkbox name="gridLines" value={formState.gridLines} onValueChange={setFormState}>
-              <Text>Enabled</Text>
-            </Checkbox>
-          </div>
-
-          <div>
-            <TextboxColor
-              disabled={!formState.gridLines}
-              hexColor={formState.gridLineColor}
-              hexColorPlaceholder="Color"
-              hexColorName="gridLineColor"
-              onHexColorValueInput={setFormState}
-              opacityName="gridLineOpacity"
-              opacity={formState.gridLineOpacity}
-              onOpacityValueInput={setFormState}
-              opacityPlaceholder="%"
-            />
-          </div>
-        </Columns>
-
-        <VerticalSpace space="large" />
-
-        <div>
-          <Text muted>Font Family</Text>
-          <VerticalSpace space="small" />
-
-          <div class={styles.dropdownContainer}>
-            <Dropdown
-              name="fontFamily"
-              onValueChange={family => {
-                const styles = fontMap.get(family)!;
-
-                if (!styles.find(s => s.value === formState.fontStyle)) {
-                  setFontStyles(styles);
-                  setFormState(styles[0].value, 'fontStyle');
-                }
-
-                setFormState(family, 'fontFamily');
-              }}
-              options={fontFamilies}
-              value={formState.fontFamily}
-            >
-              <div class={styles.dropdownValue}>
-                <Text>{formState.fontFamily || ' '}</Text>
-              </div>
-            </Dropdown>
-          </div>
-        </div>
-
-        <VerticalSpace space="large" />
-
-        <div>
-          <Text muted>Font Style</Text>
-          <VerticalSpace space="small" />
-
-          <div class={styles.dropdownContainer}>
-            <Dropdown
-              name="fontStyle"
-              onValueChange={setFormState}
-              options={fontStyles}
-              value={formState.fontStyle}
-            >
-              <div class={styles.dropdownValue}>
-                <Text>{formState.fontStyle || ' '}</Text>
-              </div>
-            </Dropdown>
-          </div>
-        </div>
-
-        <VerticalSpace space="large" />
-
         <Button fullWidth onClick={handleSubmit}>
           Apply
         </Button>
 
         <VerticalSpace space="small" />
-
         <Button
           fullWidth
           secondary

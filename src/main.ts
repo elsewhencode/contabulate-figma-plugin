@@ -1,12 +1,28 @@
 import { loadSettingsAsync, on, once, setRelaunchButton } from '@create-figma-plugin/utilities';
 import { showUI } from '@create-figma-plugin/utilities';
 import faker from 'faker';
-import { TableSpec } from './dto/tableSpec';
+import { ColumnType, TableSpec } from './dto/tableSpec';
 import { PluginProps } from './types';
+import { SIZE } from './ui';
+import { toTitle } from './utils';
 
 const robotoRegular: FontName = { family: 'Roboto', style: 'Regular' };
 
 const defaultGridLineColor: RGB = { r: 80, g: 80, b: 80 };
+
+const now = Date.now();
+faker.seed(now);
+
+const columnData = (type: ColumnType) => {
+  switch (type) {
+    default:
+      return faker.random.word();
+    case 'Date':
+      return faker.date.future().toDateString();
+    case 'Number':
+      return `${faker.datatype.number()}`;
+  }
+};
 
 export const defaultSpec: TableSpec = {
   cols: 5,
@@ -19,13 +35,17 @@ export const defaultSpec: TableSpec = {
     gridLineColor: defaultGridLineColor,
     gridLineOpacity: 0.25,
   },
-  seed: Date.now(),
+  seed: now,
+  columns: Array.from({ length: 5 }).map(() => ({
+    name: toTitle(faker.random.word()),
+    type: 'Word',
+  })),
 };
 
 const errorMessage = 'Please select an empty frame node or an existing table.';
 
 export default async function () {
-  const options = { width: 300, height: 450 };
+  const options = SIZE;
 
   const [fonts, settings] = await Promise.all([
     figma.listAvailableFontsAsync(),
@@ -63,7 +83,7 @@ export default async function () {
   let currentUpdate: Promise<void> | null = null;
 
   const applySpec = async (spec: TableSpec) => {
-    const { cols: cols, rows, styles, padding, spacing, font, seed } = spec;
+    const { rows, styles, padding, spacing, font, seed, columns } = spec;
 
     faker.seed(seed);
 
@@ -77,9 +97,9 @@ export default async function () {
 
     if (bold) {
       await figma.loadFontAsync(bold);
-    } else {
-      bold = font;
     }
+
+    const headerFont = bold || font;
 
     target.layoutMode = 'VERTICAL';
     target.itemSpacing = styles.gridLines ? spacing / 2 : spacing;
@@ -114,16 +134,21 @@ export default async function () {
       row.primaryAxisSizingMode = 'FIXED';
       row.counterAxisSizingMode = 'AUTO';
 
-      for (let c = 0; c < cols; c++) {
+      columns.forEach(spec => {
         const cell = figma.createText();
         row.appendChild(cell);
 
         // Header?
-        cell.fontName = r === 0 ? bold : font;
+        const isHeader = r === 0;
+
+        cell.fontName = isHeader ? headerFont : font;
         cell.layoutGrow = 1;
+
         const word = faker.random.word();
-        cell.characters = r === 0 ? `${word[0].toLocaleUpperCase()}${word.substr(1)}` : word;
-      }
+        cell.characters = isHeader
+          ? spec.name || toTitle(faker.random.word())
+          : columnData(spec.type);
+      });
     }
   };
 

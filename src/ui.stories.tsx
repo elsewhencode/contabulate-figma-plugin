@@ -2,32 +2,34 @@
 
 import { h } from 'preact';
 import { defaultSpec } from './main';
-import { Plugin } from './ui';
+import { Plugin, SIZE } from './ui';
 
 export default {
   title: 'Plugin',
 };
 
 export const Default = () => (
-  <Plugin
-    spec={defaultSpec}
-    fonts={[
-      {
-        fontName: { family: 'Helvetica', style: 'Regular' },
-      },
-      { fontName: { family: 'Helvetica', style: 'Bold' } },
-      {
-        fontName: {
-          family: 'Roboto',
-          style: 'Regular',
+  <div style={{ height: `${SIZE.height}px` }}>
+    <Plugin
+      spec={defaultSpec}
+      fonts={[
+        {
+          fontName: { family: 'Helvetica', style: 'Regular' },
         },
-      },
-      {
-        fontName: {
-          family: 'Roboto',
-          style: 'Medium',
+        { fontName: { family: 'Helvetica', style: 'Bold' } },
+        {
+          fontName: {
+            family: 'Roboto',
+            style: 'Regular',
+          },
         },
-      },
-    ]}
-  />
+        {
+          fontName: {
+            family: 'Roboto',
+            style: 'Medium',
+          },
+        },
+      ]}
+    />
+  </div>
 );
